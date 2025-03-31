@@ -12,6 +12,9 @@ public class BaseString : MonoBehaviour
     [SerializeField] private float pinchPosition = 0.15f;
     [SerializeField] private float pinchIntensity = 2f;
 
+    [Header("Display")]
+    // [SerializeField] private LineRenderer waveformLine;
+    [SerializeField] private LineRenderer[] harmonicLines; // Taille = nombre d'harmoniques
 
     private readonly float dampingCoefficient = 0.5f;
     private readonly float[] harmonicsFrequencies = new float[3];
@@ -35,6 +38,11 @@ public class BaseString : MonoBehaviour
         audioSource.Play();
     }
 
+    private void Update()
+    {
+        UpdateWaveformDisplay();
+    }
+
     private void OnAudioFilterRead(float[] data, int channels)
     {
         float timeStep = 1f / sampleRate;
@@ -45,6 +53,28 @@ public class BaseString : MonoBehaviour
             currentTime += timeStep;
 
             for (var channel = 0; channel < channels; channel++) data[i + channel] = sample;
+        }
+    }
+
+    private void UpdateWaveformDisplay()
+    {
+        const int sampleCount = 256;
+
+        for (var h = 0; h < harmonicsProportions.Length; h++)
+        {
+            harmonicLines[h].positionCount = sampleCount;
+
+            for (var i = 0; i < sampleCount; i++)
+            {
+                float t = i / (float) sampleCount * 0.1f;
+
+                float harmonicWave = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[h] * t / 20f); // Ralenti
+                float dampingFactor = Mathf.Exp(-dampingCoefficient * h * currentTime);
+                var amplitude = (float) (harmonicWave * harmonicsProportions[h] * excitationIntensity * dampingFactor);
+
+                var position = new Vector3(i / (float) sampleCount * 10f, amplitude * 3f, 0);
+                harmonicLines[h].SetPosition(i, position);
+            }
         }
     }
 

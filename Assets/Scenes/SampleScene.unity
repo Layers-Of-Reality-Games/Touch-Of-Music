@@ -935,6 +935,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7238771356473523116, guid: dfa20ae1334892a49904fe4e159f2048, type: 3}
+      propertyPath: waveformLine
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 7645964164941647598, guid: dfa20ae1334892a49904fe4e159f2048, type: 3}
       propertyPath: m_Name
       value: String
