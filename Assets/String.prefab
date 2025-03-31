@@ -45,11 +45,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f0c70dd4ff8a9f4181b46e88332f9da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  length: 1
-  linearDensity: 0.1
-  tension: 100
-  pinchPosition: 0.5
-  pinchIntensity: 0.5
+  length: 0.65
+  linearDensity: 0.00738
+  tension: 86
+  pinchPosition: 0.15
+  pinchIntensity: 2
 --- !u!82 &1675882464404026497
 AudioSource:
   m_ObjectHideFlags: 0

@@ -4,13 +4,13 @@ using UnityEngine;
 public class BaseString : MonoBehaviour
 {
     [Header("String properties")]
-    [SerializeField] private float length = 1.0f;
-    [SerializeField] private float linearDensity = 0.01f;
-    [SerializeField] private float tension = 100f;
+    [SerializeField] private float length = 0.65f;
+    [SerializeField] private float linearDensity = 0.00738f;
+    [SerializeField] private float tension = 86f;
 
     [Header("Pinch properties")]
-    [SerializeField] private float pinchPosition = 0.5f;
-    [SerializeField] private float pinchIntensity = 0.5f;
+    [SerializeField] private float pinchPosition = 0.15f;
+    [SerializeField] private float pinchIntensity = 2f;
 
 
     private readonly float dampingCoefficient = 0.5f;
@@ -33,11 +33,6 @@ public class BaseString : MonoBehaviour
         // audioSource.loop = true;
         audioSource.clip = AudioClip.Create("StringSound", sampleRate, 1, sampleRate, false);
         audioSource.Play();
-    }
-
-    private void Start()
-    {
-        // Pinch(0.5f, 0.5f);
     }
 
     private void OnAudioFilterRead(float[] data, int channels)
@@ -80,6 +75,5 @@ public class BaseString : MonoBehaviour
         }
 
         return Mathf.Clamp(sample, -1f, 1f);
-        // return 0;
     }
 }
