@@ -1,30 +1,39 @@
 using System;
+using TMPro;
 using UnityEngine;
 
 public class BaseString : MonoBehaviour
 {
+    private const int sampleCount = 256;
+
     [Header("String properties")]
     [SerializeField] private float length = 0.65f;
     [SerializeField] private float linearDensity = 0.00738f;
     [SerializeField] private float tension = 86f;
+    [SerializeField] private int harmonicsCount = 3;
 
     [Header("Pinch properties")]
     [SerializeField] private float pinchPosition = 0.15f;
     [SerializeField] private float pinchIntensity = 2f;
 
     [Header("Display")]
-    // [SerializeField] private LineRenderer waveformLine;
-    [SerializeField] private LineRenderer[] harmonicLines; // Taille = nombre d'harmoniques
+    [SerializeField] private LineRenderer lineRendererPrefab;
+    [SerializeField] private TextMeshProUGUI harmonicTextPrefab;
+    [SerializeField] private Canvas canvas;
 
     private readonly float dampingCoefficient = 0.5f;
-    private readonly float[] harmonicsFrequencies = new float[3];
-    private readonly double[] harmonicsProportions = new double[3];
 
     private AudioSource audioSource;
 
     private float currentTime;
     private float excitationIntensity;
+
+    private LineRenderer[] harmonicLines;
+    private float[] harmonicsFrequencies;
+    private double[] harmonicsProportions;
+    private TextMeshProUGUI[] harmonicText;
     private int sampleRate;
+    public int HarmonicsCount => harmonicsCount;
 
     private void Awake()
     {
@@ -33,15 +42,19 @@ public class BaseString : MonoBehaviour
 
         audioSource.playOnAwake = true;
         audioSource.spatialBlend = 0f;
-        // audioSource.loop = true;
         audioSource.clip = AudioClip.Create("StringSound", sampleRate, 1, sampleRate, false);
         audioSource.Play();
+
+        harmonicsFrequencies = new float[harmonicsCount];
+        harmonicsProportions = new double[harmonicsCount];
+
+        // RegenerateHarmonics();
     }
 
-    private void Update()
-    {
-        UpdateWaveformDisplay();
-    }
+    // private void Update()
+    // {
+    //     UpdateWaveformDisplay();
+    // }
 
     private void OnAudioFilterRead(float[] data, int channels)
     {
@@ -56,25 +69,60 @@ public class BaseString : MonoBehaviour
         }
     }
 
+    private void RegenerateHarmonics()
+    {
+        if (harmonicLines != null)
+            for (var i = 0; i < harmonicLines.Length; i++)
+                Destroy(harmonicLines[i].gameObject);
+        harmonicLines = new LineRenderer[harmonicsCount];
+
+        for (var i = 0; i < harmonicsCount; i++)
+        {
+            harmonicLines[i] = Instantiate(lineRendererPrefab, transform);
+            harmonicLines[i].positionCount = 256;
+            harmonicLines[i].startWidth = 0.2f;
+            harmonicLines[i].endWidth = 0.2f;
+            harmonicLines[i].material.color = Color.Lerp(Color.red, Color.blue, (float) i / harmonicsCount);
+        }
+
+        RegenerateText();
+    }
+
+    private void RegenerateText()
+    {
+        if (harmonicText != null)
+            for (var i = 0; i < harmonicText.Length; i++)
+                Destroy(harmonicText[i].gameObject);
+        harmonicText = new TextMeshProUGUI[harmonicsCount];
+
+        for (var i = 0; i < harmonicsCount; i++)
+        {
+            harmonicText[i] = Instantiate(harmonicTextPrefab, canvas.transform);
+            harmonicText[i].text =
+                $"Harmonic {i + 1} : {GetNoteNameFromFrequency(harmonicsFrequencies[i])} - {harmonicsFrequencies[i]:F2} Hz";
+            harmonicText[i].color = Color.Lerp(Color.red, Color.blue, (float) i / harmonicsCount);
+            harmonicText[i].fontSize = 10;
+            harmonicText[i].transform.position = new Vector3(100, 100 + i * 30f, 0);
+        }
+    }
+
     private void UpdateWaveformDisplay()
     {
-        const int sampleCount = 256;
-
-        for (var h = 0; h < harmonicsProportions.Length; h++)
+        for (var h = 0; h < harmonicsCount; h++)
+        for (var i = 0; i < sampleCount; i++)
         {
-            harmonicLines[h].positionCount = sampleCount;
+            float x = i / (float) (sampleCount - 1);
 
-            for (var i = 0; i < sampleCount; i++)
-            {
-                float t = i / (float) sampleCount * 0.1f;
-
-                float harmonicWave = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[h] * t / 20f); // Ralenti
-                float dampingFactor = Mathf.Exp(-dampingCoefficient * h * currentTime);
-                var amplitude = (float) (harmonicWave * harmonicsProportions[h] * excitationIntensity * dampingFactor);
-
-                var position = new Vector3(i / (float) sampleCount * 10f, amplitude * 3f, 0);
-                harmonicLines[h].SetPosition(i, position);
-            }
+            float harmonicShape = Mathf.Sin((h + 1) * Mathf.PI * x);
+            float oscillation = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[h] * currentTime / 70f);
+            float dampingFactor = Mathf.Exp(-dampingCoefficient * (h + 1) * currentTime);
+            var amplitude = (float) (harmonicShape
+                                     * oscillation
+                                     * harmonicsProportions[h]
+                                     * excitationIntensity
+                                     * dampingFactor);
+            var position = new Vector3(x * 10f, amplitude * 3f, 0);
+            harmonicLines[h].SetPosition(i, position);
         }
     }
 
@@ -83,27 +131,58 @@ public class BaseString : MonoBehaviour
         currentTime = 0f;
         excitationIntensity = pinchIntensity;
 
-        harmonicsProportions[0] = Math.Abs(Math.Sin(1 * Mathf.PI * pinchPosition / length));
-        harmonicsProportions[1] = Math.Abs(Math.Sin(2 * Mathf.PI * pinchPosition / length));
-        harmonicsProportions[2] = Math.Abs(Math.Sin(3 * Mathf.PI * pinchPosition / length));
+        for (var i = 0; i < harmonicsCount; i++)
+        {
+            harmonicsProportions[i] = Math.Abs(Math.Sin((i + 1) * Mathf.PI * pinchPosition / length));
+            harmonicsFrequencies[i] = (float) ((i + 1) / (2 * length) * Math.Sqrt(tension / linearDensity));
+        }
 
-        harmonicsFrequencies[0] = (float) (1 / (2 * length) * Math.Sqrt(tension / linearDensity));
-        harmonicsFrequencies[1] = (float) (2 / (2 * length) * Math.Sqrt(tension / linearDensity));
-        harmonicsFrequencies[2] = (float) (3 / (2 * length) * Math.Sqrt(tension / linearDensity));
+        // RegenerateText();
     }
 
     private float GenerateSoundSample(float time)
     {
         float sample = 0;
 
-        for (var k = 0; k < harmonicsProportions.Length; k++)
+        for (var k = 0; k < harmonicsCount; k++)
         {
             float harmonicWave = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[k] * time);
-            float dampingFactor = Mathf.Exp(-dampingCoefficient * k * time);
+            float dampingFactor = Mathf.Exp(-dampingCoefficient * (k + 1) * time);
 
             sample += (float) (harmonicWave * harmonicsProportions[k] * excitationIntensity * dampingFactor);
         }
 
         return Mathf.Clamp(sample, -1f, 1f);
+    }
+
+    public void OnChangeHarmonicsCount(int count)
+    {
+        if (count >= 10) return;
+
+        harmonicsCount = count;
+        Array.Resize(ref harmonicsFrequencies, harmonicsCount);
+        Array.Resize(ref harmonicsProportions, harmonicsCount);
+
+        // RegenerateHarmonics();
+    }
+
+    public string GetNoteNameFromFrequency(float frequency)
+    {
+        const float referenceFrequency = 440.0f;
+
+        string[] noteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+        float numberOfHalfSteps = 12 * Mathf.Log(frequency / referenceFrequency, 2);
+        int roundedHalfSteps = Mathf.RoundToInt(numberOfHalfSteps);
+        int octave = 3 + (roundedHalfSteps + 9) / 12;
+
+        int noteIndex = (roundedHalfSteps + 9) % 12;
+        if (noteIndex < 0) noteIndex += 12;
+
+        string noteName = noteNames[noteIndex];
+
+        float cents = 100 * (numberOfHalfSteps - roundedHalfSteps);
+        string centsString = cents != 0 ? $" ({cents:+0.0;-0.0} cents)" : "";
+
+        return $"{noteName}{octave}{centsString}";
     }
 }
