@@ -32,10 +32,18 @@ PrefabInstance:
       propertyPath: m_AimTargetObject
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 1301278027045141827, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      propertyPath: m_InteractorSource
+      value: 
+      objectReference: {fileID: 4045441172913001088, guid: 06ea7168899850f45a7c6f1f504997a2, type: 3}
     - target: {fileID: 1525377159282626914, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
       propertyPath: m_ControllerTransform
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 1849316314740521585, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      propertyPath: m_PokeInteractorObject
+      value: 
+      objectReference: {fileID: 4045441172913001088, guid: 06ea7168899850f45a7c6f1f504997a2, type: 3}
     - target: {fileID: 2218496723442559053, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -96,6 +104,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3494121931920399515, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      propertyPath: m_PokeInteractorObject
+      value: 
+      objectReference: {fileID: 4045441172913001088, guid: 06ea7168899850f45a7c6f1f504997a2, type: 3}
     - target: {fileID: 3581603309145056405, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
       propertyPath: m_ControllerTransform
       value: 
@@ -144,6 +156,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6428197243378387168, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
+      propertyPath: m_InteractorSource
+      value: 
+      objectReference: {fileID: 4045441172913001088, guid: 06ea7168899850f45a7c6f1f504997a2, type: 3}
     - target: {fileID: 6468442521412095314, guid: d6878e1999eb4b44a9f5a263af86c185, type: 3}
       propertyPath: m_LeftController
       value: 

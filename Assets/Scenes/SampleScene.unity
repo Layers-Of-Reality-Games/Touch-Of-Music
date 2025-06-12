@@ -1007,7 +1007,15 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1730073757}
     - target: {fileID: 374958601245837382, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
+      propertyPath: m_SystemGestureEnded.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 374958601245837382, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
       propertyPath: m_SystemGestureEnded.m_PersistentCalls.m_Calls.Array.data[1].m_Target
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 374958601245837382, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
+      propertyPath: m_SystemGestureStarted.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 374958601245837382, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
@@ -1051,7 +1059,15 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1730073757}
     - target: {fileID: 2936754360580205920, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
+      propertyPath: 'm_StartingGroupMembers.Array.data[0]'
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2936754360580205920, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
       propertyPath: 'm_StartingGroupMembers.Array.data[1]'
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2936754360580205920, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
+      propertyPath: m_StartingInteractionOverridesMap.Array.data[0].groupMember
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 2936754360580205920, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
@@ -1100,14 +1116,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5683918892531194466, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
       propertyPath: m_LineOriginTransform
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 7044611974910220577, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
-      propertyPath: m_InteractorSource
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 7666951063958068755, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
-      propertyPath: m_PokeInteractorObject
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7750953358920461293, guid: 59fccef1fe017f94d9e9b98cc314cd86, type: 3}
