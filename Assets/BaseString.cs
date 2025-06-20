@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -32,6 +33,7 @@ public class BaseString : MonoBehaviour
     private float[] harmonicsFrequencies;
     private double[] harmonicsProportions;
     private TextMeshProUGUI[] harmonicText;
+    private bool isPlaying;
     private int sampleRate;
     public int HarmonicsCount => harmonicsCount;
 
@@ -40,24 +42,27 @@ public class BaseString : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         sampleRate = AudioSettings.outputSampleRate;
 
-        audioSource.playOnAwake = true;
+        audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
-        audioSource.clip = AudioClip.Create("StringSound", sampleRate, 1, sampleRate, false);
-        audioSource.Play();
+        audioSource.loop = true;
+
+        audioSource.clip = AudioClip.Create("StringSound", sampleRate * 2, 1, sampleRate, true, OnAudioRead);
 
         harmonicsFrequencies = new float[harmonicsCount];
         harmonicsProportions = new double[harmonicsCount];
 
-        // RegenerateHarmonics();
+        SetStringProperties(length, linearDensity, tension);
     }
-
-    // private void Update()
-    // {
-    //     UpdateWaveformDisplay();
-    // }
 
     private void OnAudioFilterRead(float[] data, int channels)
     {
+        if (!isPlaying)
+        {
+            // Fill with silence when not playing
+            for (var i = 0; i < data.Length; i++) data[i] = 0f;
+            return;
+        }
+
         float timeStep = 1f / sampleRate;
 
         for (var i = 0; i < data.Length; i += channels)
@@ -69,75 +74,66 @@ public class BaseString : MonoBehaviour
         }
     }
 
-    private void RegenerateHarmonics()
+    private void OnAudioRead(float[] data)
     {
-        if (harmonicLines != null)
-            for (var i = 0; i < harmonicLines.Length; i++)
-                Destroy(harmonicLines[i].gameObject);
-        harmonicLines = new LineRenderer[harmonicsCount];
-
-        for (var i = 0; i < harmonicsCount; i++)
+        if (!isPlaying)
         {
-            harmonicLines[i] = Instantiate(lineRendererPrefab, transform);
-            harmonicLines[i].positionCount = 256;
-            harmonicLines[i].startWidth = 0.2f;
-            harmonicLines[i].endWidth = 0.2f;
-            harmonicLines[i].material.color = Color.Lerp(Color.red, Color.blue, (float) i / harmonicsCount);
+            for (var i = 0; i < data.Length; i++) data[i] = 0f;
+            return;
         }
 
-        RegenerateText();
-    }
+        float timeStep = 1f / sampleRate;
 
-    private void RegenerateText()
-    {
-        if (harmonicText != null)
-            for (var i = 0; i < harmonicText.Length; i++)
-                Destroy(harmonicText[i].gameObject);
-        harmonicText = new TextMeshProUGUI[harmonicsCount];
-
-        for (var i = 0; i < harmonicsCount; i++)
+        for (var i = 0; i < data.Length; i++)
         {
-            harmonicText[i] = Instantiate(harmonicTextPrefab, canvas.transform);
-            harmonicText[i].text =
-                $"Harmonic {i + 1} : {GetNoteNameFromFrequency(harmonicsFrequencies[i])} - {harmonicsFrequencies[i]:F2} Hz";
-            harmonicText[i].color = Color.Lerp(Color.red, Color.blue, (float) i / harmonicsCount);
-            harmonicText[i].fontSize = 10;
-            harmonicText[i].transform.position = new Vector3(100, 100 + i * 30f, 0);
+            float sample = GenerateSoundSample(currentTime);
+            currentTime += timeStep;
+            data[i] = sample;
         }
     }
 
-    private void UpdateWaveformDisplay()
+    public void SetStringProperties(float stringLength, float density, float stringTension)
     {
-        for (var h = 0; h < harmonicsCount; h++)
-        for (var i = 0; i < sampleCount; i++)
-        {
-            float x = i / (float) (sampleCount - 1);
+        length = stringLength;
+        linearDensity = density;
+        tension = stringTension;
 
-            float harmonicShape = Mathf.Sin((h + 1) * Mathf.PI * x);
-            float oscillation = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[h] * currentTime / 70f);
-            float dampingFactor = Mathf.Exp(-dampingCoefficient * (h + 1) * currentTime);
-            var amplitude = (float) (harmonicShape
-                                     * oscillation
-                                     * harmonicsProportions[h]
-                                     * excitationIntensity
-                                     * dampingFactor);
-            var position = new Vector3(x * 10f, amplitude * 3f, 0);
-            harmonicLines[h].SetPosition(i, position);
+        for (var i = 0; i < harmonicsCount; i++)
+        {
+            harmonicsFrequencies[i] = (float) ((i + 1) / (2 * length) * Math.Sqrt(tension / linearDensity));
+            harmonicsProportions[i] = 0;
         }
+    }
+
+    public void SetStringPropertiesFromData(PianoStringData data)
+    {
+        SetStringProperties(data.length, data.linearDensity, data.tension);
     }
 
     public void Pinch()
     {
+        Debug.Log($"Pinch called - Frequency: {harmonicsFrequencies[0]:F2} Hz");
+
         currentTime = 0f;
         excitationIntensity = pinchIntensity;
+        isPlaying = true;
 
         for (var i = 0; i < harmonicsCount; i++)
-        {
-            harmonicsProportions[i] = Math.Abs(Math.Sin((i + 1) * Mathf.PI * pinchPosition / length));
-            harmonicsFrequencies[i] = (float) ((i + 1) / (2 * length) * Math.Sqrt(tension / linearDensity));
-        }
+            harmonicsProportions[i] = Math.Abs(Math.Sin((i + 1) * Mathf.PI * pinchPosition));
+        if (!audioSource.isPlaying) audioSource.Play();
+    }
 
-        // RegenerateText();
+    public void StopPinch()
+    {
+        Debug.Log("StopPinch called");
+        StartCoroutine(StopAfterDecay());
+    }
+
+    private IEnumerator StopAfterDecay()
+    {
+        yield return new WaitForSeconds(3f);
+        isPlaying = false;
+        if (audioSource.isPlaying && !isPlaying) audioSource.Stop();
     }
 
     private float GenerateSoundSample(float time)
@@ -145,12 +141,15 @@ public class BaseString : MonoBehaviour
         float sample = 0;
 
         for (var k = 0; k < harmonicsCount; k++)
-        {
-            float harmonicWave = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[k] * time);
-            float dampingFactor = Mathf.Exp(-dampingCoefficient * (k + 1) * time);
+            if (harmonicsFrequencies[k] > 0) // Only process valid frequencies
+            {
+                float harmonicWave = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[k] * time);
+                float dampingFactor = Mathf.Exp(-dampingCoefficient * (k + 1) * time);
 
-            sample += (float) (harmonicWave * harmonicsProportions[k] * excitationIntensity * dampingFactor);
-        }
+                sample += (float) (harmonicWave * harmonicsProportions[k] * excitationIntensity * dampingFactor);
+            }
+
+        sample *= 0.3f;
 
         return Mathf.Clamp(sample, -1f, 1f);
     }
@@ -162,8 +161,6 @@ public class BaseString : MonoBehaviour
         harmonicsCount = count;
         Array.Resize(ref harmonicsFrequencies, harmonicsCount);
         Array.Resize(ref harmonicsProportions, harmonicsCount);
-
-        // RegenerateHarmonics();
     }
 
     public string GetNoteNameFromFrequency(float frequency)
@@ -173,7 +170,7 @@ public class BaseString : MonoBehaviour
         string[] noteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
         float numberOfHalfSteps = 12 * Mathf.Log(frequency / referenceFrequency, 2);
         int roundedHalfSteps = Mathf.RoundToInt(numberOfHalfSteps);
-        int octave = 3 + (roundedHalfSteps + 9) / 12;
+        int octave = 4 + (roundedHalfSteps + 9) / 12;
 
         int noteIndex = (roundedHalfSteps + 9) % 12;
         if (noteIndex < 0) noteIndex += 12;
