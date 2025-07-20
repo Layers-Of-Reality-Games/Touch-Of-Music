@@ -1980,6 +1980,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6608302656982194318, guid: 4412c2bf2cbcb0e46af87d4fe731efbd, type: 3}
+      propertyPath: whiteKeyPrefab
+      value: 
+      objectReference: {fileID: 7186511365234491956, guid: 4c63923e94382734c9dc749ce98481dd, type: 3}
     - target: {fileID: 8522483151249903250, guid: 4412c2bf2cbcb0e46af87d4fe731efbd, type: 3}
       propertyPath: m_Name
       value: Piano

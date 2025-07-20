@@ -17,9 +17,9 @@ public class HarmonicSlider : MonoBehaviour
         valueText.text = "Harmonics: " + Mathf.RoundToInt(slider.value);
     }
 
-    public void OnValueChanged()
-    {
-        baseString.OnChangeHarmonicsCount(Mathf.RoundToInt(slider.value));
-        valueText.text = "Harmonics: " + Mathf.RoundToInt(slider.value);
-    }
+    // public void OnValueChanged()
+    // {
+    //     baseString.OnChangeHarmonicsCount(Mathf.RoundToInt(slider.value));
+    //     valueText.text = "Harmonics: " + Mathf.RoundToInt(slider.value);
+    // }
 }

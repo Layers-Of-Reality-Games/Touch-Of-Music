@@ -1,94 +1,99 @@
 using System;
-using System.Collections;
-using TMPro;
 using UnityEngine;
 
 public class BaseString : MonoBehaviour
 {
-    private const int sampleCount = 256;
-
     [Header("String properties")]
     [SerializeField] private float length = 0.65f;
     [SerializeField] private float linearDensity = 0.00738f;
     [SerializeField] private float tension = 86f;
-    [SerializeField] private int harmonicsCount = 3;
+    [SerializeField] private int harmonicsCount = 5;
 
     [Header("Pinch properties")]
     [SerializeField] private float pinchPosition = 0.15f;
-    [SerializeField] private float pinchIntensity = 2f;
+    [SerializeField] private float pinchIntensity = 0.5f;
 
-    [Header("Display")]
-    [SerializeField] private LineRenderer lineRendererPrefab;
-    [SerializeField] private TextMeshProUGUI harmonicTextPrefab;
-    [SerializeField] private Canvas canvas;
-
-    private readonly float dampingCoefficient = 0.5f;
+    [Header("Audio Settings")]
+    [SerializeField] private float masterVolume = 0.5f;
+    [SerializeField] private float dampingCoefficient = 0.5f;
 
     private AudioSource audioSource;
-
-    private float currentTime;
-    private float excitationIntensity;
-
-    private LineRenderer[] harmonicLines;
     private float[] harmonicsFrequencies;
-    private double[] harmonicsProportions;
-    private TextMeshProUGUI[] harmonicText;
-    private bool isPlaying;
+    private float[] harmonicsAmplitudes;
+    private float[] harmonicsPhases;
+    private float amplitude;
+    private float targetAmplitude;
     private int sampleRate;
+    private float timeSincePinch;
+
+    private const float FADE_SPEED = 50f;
+
     public int HarmonicsCount => harmonicsCount;
 
     private void Awake()
     {
         audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            Debug.LogError("No AudioSource component found!");
+            return;
+        }
+
         sampleRate = AudioSettings.outputSampleRate;
+        Debug.Log($"Sample rate: {sampleRate}");
 
         audioSource.playOnAwake = false;
         audioSource.spatialBlend = 0f;
         audioSource.loop = true;
+        audioSource.volume = 1f;
 
         audioSource.clip = AudioClip.Create("StringSound", sampleRate * 2, 1, sampleRate, true, OnAudioRead);
 
         harmonicsFrequencies = new float[harmonicsCount];
-        harmonicsProportions = new double[harmonicsCount];
+        harmonicsAmplitudes = new float[harmonicsCount];
+        harmonicsPhases = new float[harmonicsCount];
 
         SetStringProperties(length, linearDensity, tension);
     }
 
-    private void OnAudioFilterRead(float[] data, int channels)
-    {
-        if (!isPlaying)
-        {
-            // Fill with silence when not playing
-            for (var i = 0; i < data.Length; i++) data[i] = 0f;
-            return;
-        }
-
-        float timeStep = 1f / sampleRate;
-
-        for (var i = 0; i < data.Length; i += channels)
-        {
-            float sample = GenerateSoundSample(currentTime);
-            currentTime += timeStep;
-
-            for (var channel = 0; channel < channels; channel++) data[i + channel] = sample;
-        }
-    }
-
     private void OnAudioRead(float[] data)
     {
-        if (!isPlaying)
-        {
-            for (var i = 0; i < data.Length; i++) data[i] = 0f;
-            return;
-        }
+        float deltaTime = 1f / sampleRate;
 
-        float timeStep = 1f / sampleRate;
-
-        for (var i = 0; i < data.Length; i++)
+        for (int i = 0; i < data.Length; i++)
         {
-            float sample = GenerateSoundSample(currentTime);
-            currentTime += timeStep;
-            data[i] = sample;
+            amplitude = Mathf.MoveTowards(amplitude, targetAmplitude, FADE_SPEED * deltaTime);
+
+            float sample = 0f;
+
+            if (amplitude > 0.001f)
+            {
+                timeSincePinch += deltaTime;
+
+                for (int h = 0; h < harmonicsCount; h++)
+                {
+                    float freq = harmonicsFrequencies[h];
+
+                    if (freq > 20f && freq < 20000f)
+                    {
+                        harmonicsPhases[h] += 2f * Mathf.PI * freq * deltaTime;
+
+                        // Wrap phase to prevent numerical issues
+                        while (harmonicsPhases[h] > 2f * Mathf.PI)
+                            harmonicsPhases[h] -= 2f * Mathf.PI;
+
+                        // Calculate time-based damping (exponential decay)
+                        float damping = Mathf.Exp(-dampingCoefficient * (h + 1) * timeSincePinch);
+                        float currentAmplitude = harmonicsAmplitudes[h] * damping * amplitude;
+
+                        sample += Mathf.Sin(harmonicsPhases[h]) * currentAmplitude;
+                    }
+                }
+
+                sample *= masterVolume;
+            }
+
+            data[i] = Mathf.Clamp(sample, -0.95f, 0.95f);
         }
     }
 
@@ -98,10 +103,15 @@ public class BaseString : MonoBehaviour
         linearDensity = density;
         tension = stringTension;
 
-        for (var i = 0; i < harmonicsCount; i++)
+        float fundamental = (float)(0.5f / length * Math.Sqrt(tension / linearDensity));
+        Debug.Log($"Fundamental frequency: {fundamental} Hz");
+
+        for (int i = 0; i < harmonicsCount; i++)
         {
-            harmonicsFrequencies[i] = (float) ((i + 1) / (2 * length) * Math.Sqrt(tension / linearDensity));
-            harmonicsProportions[i] = 0;
+            // Apply slight inharmonicity
+            harmonicsFrequencies[i] = fundamental * (i + 1) * (1f + 0.0001f * (i + 1) * (i + 1));
+            harmonicsAmplitudes[i] = 0f;
+            harmonicsPhases[i] = 0f;
         }
     }
 
@@ -112,74 +122,44 @@ public class BaseString : MonoBehaviour
 
     public void Pinch()
     {
-        Debug.Log($"Pinch called - Frequency: {harmonicsFrequencies[0]:F2} Hz");
+        timeSincePinch = 0f;
 
-        currentTime = 0f;
-        excitationIntensity = pinchIntensity;
-        isPlaying = true;
+        // Calculate harmonic amplitudes based on pinch position
+        for (int i = 0; i < harmonicsCount; i++)
+        {
+            float n = i + 1;
 
-        for (var i = 0; i < harmonicsCount; i++)
-            harmonicsProportions[i] = Math.Abs(Math.Sin((i + 1) * Mathf.PI * pinchPosition));
-        if (!audioSource.isPlaying) audioSource.Play();
+            // Physical string pinch formula
+            harmonicsAmplitudes[i] = 2f
+                                     * pinchIntensity
+                                     / (n * n * Mathf.PI * Mathf.PI)
+                                     * Mathf.Sin(n * Mathf.PI * pinchPosition);
+
+            // Debug.Log($"Harmonic {n}: Freq={harmonicsFrequencies[i]:F2} Hz, Amp={harmonicsAmplitudes[i]:F4}");
+        }
+
+        targetAmplitude = 1f;
+
+        if (!audioSource.isPlaying)
+        {
+            audioSource.Play();
+        }
     }
 
     public void StopPinch()
     {
-        Debug.Log("StopPinch called");
-        StartCoroutine(StopAfterDecay());
+        targetAmplitude = 0f;
     }
 
-    private IEnumerator StopAfterDecay()
+    private void Update()
     {
-        yield return new WaitForSeconds(3f);
-        isPlaying = false;
-        if (audioSource.isPlaying && !isPlaying) audioSource.Stop();
-    }
-
-    private float GenerateSoundSample(float time)
-    {
-        float sample = 0;
-
-        for (var k = 0; k < harmonicsCount; k++)
-            if (harmonicsFrequencies[k] > 0) // Only process valid frequencies
+        if (amplitude < 0.001f && targetAmplitude == 0f && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+            for (int i = 0; i < harmonicsCount; i++)
             {
-                float harmonicWave = Mathf.Sin(2 * Mathf.PI * harmonicsFrequencies[k] * time);
-                float dampingFactor = Mathf.Exp(-dampingCoefficient * (k + 1) * time);
-
-                sample += (float) (harmonicWave * harmonicsProportions[k] * excitationIntensity * dampingFactor);
+                harmonicsPhases[i] = 0f;
             }
-
-        sample *= 0.3f;
-
-        return Mathf.Clamp(sample, -1f, 1f);
-    }
-
-    public void OnChangeHarmonicsCount(int count)
-    {
-        if (count >= 10) return;
-
-        harmonicsCount = count;
-        Array.Resize(ref harmonicsFrequencies, harmonicsCount);
-        Array.Resize(ref harmonicsProportions, harmonicsCount);
-    }
-
-    public string GetNoteNameFromFrequency(float frequency)
-    {
-        const float referenceFrequency = 440.0f;
-
-        string[] noteNames = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-        float numberOfHalfSteps = 12 * Mathf.Log(frequency / referenceFrequency, 2);
-        int roundedHalfSteps = Mathf.RoundToInt(numberOfHalfSteps);
-        int octave = 4 + (roundedHalfSteps + 9) / 12;
-
-        int noteIndex = (roundedHalfSteps + 9) % 12;
-        if (noteIndex < 0) noteIndex += 12;
-
-        string noteName = noteNames[noteIndex];
-
-        float cents = 100 * (numberOfHalfSteps - roundedHalfSteps);
-        string centsString = cents != 0 ? $" ({cents:+0.0;-0.0} cents)" : "";
-
-        return $"{noteName}{octave}{centsString}";
+        }
     }
 }

@@ -13,7 +13,6 @@ public class PianoKey : MonoBehaviour
 
     private void Awake()
     {
-        // Try to find components if not assigned
         if (baseString == null) baseString = GetComponentInChildren<BaseString>();
 
         if (interactable == null) interactable = GetComponent<XRSimpleInteractable>();
@@ -36,7 +35,7 @@ public class PianoKey : MonoBehaviour
             interactable.selectEntered.AddListener(OnSelectEntered);
             interactable.selectExited.AddListener(OnSelectExited);
 
-            Debug.Log($"XR events configured for {noteName}");
+            // Debug.Log($"XR events configured for {noteName}");
         }
         else
         {
@@ -63,13 +62,13 @@ public class PianoKey : MonoBehaviour
 
     private void OnSelectExited(SelectExitEventArgs args)
     {
-        Debug.Log($"Select exited: {noteName}");
+        // Debug.Log($"Select exited: {noteName}");
         StopNote();
     }
 
     public void PlayNote()
     {
-        Debug.Log($"Playing note: {noteName}");
+        // Debug.Log($"Playing note: {noteName}");
         if (baseString != null)
             baseString.Pinch();
         else
@@ -78,7 +77,7 @@ public class PianoKey : MonoBehaviour
 
     public void StopNote()
     {
-        Debug.Log($"Stopping note: {noteName}");
+        // Debug.Log($"Stopping note: {noteName}");
         if (baseString != null) baseString.StopPinch();
     }
 }
