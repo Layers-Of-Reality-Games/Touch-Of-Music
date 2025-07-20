@@ -50,7 +50,7 @@ MonoBehaviour:
       m_Variable: {fileID: 0}
     m_List:
     - stateName: disabled
-      animationStateStartValue: {r: 0.90196085, g: 0.90196085, b: 0.90196085, a: 0.21568628}
+      animationStateStartValue: {r: 0.90196085, g: 0.90196085, b: 0.90196085, a: 0}
       animationStateEndValue: {r: 0.90196085, g: 0.90196085, b: 0.90196085, a: 0.21568628}
     - stateName: idle
       animationStateStartValue: {r: 0.90196085, g: 0.90196085, b: 0.90196085, a: 1}
