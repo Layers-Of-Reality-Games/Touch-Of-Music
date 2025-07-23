@@ -5,7 +5,6 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 public class Hand : MonoBehaviour
 {
     [SerializeField] private List<Transform> fingerPokeTransforms;
-
     public XRPokeInteractor pokeInteractorPrefab;
 
     private void Start()
