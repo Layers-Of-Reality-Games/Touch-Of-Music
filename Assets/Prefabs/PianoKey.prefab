@@ -68,6 +68,7 @@ GameObject:
   - component: {fileID: 7186511365234491956}
   - component: {fileID: -8789342015076047154}
   - component: {fileID: -8445475836824129551}
+  - component: {fileID: 1721870383600196116}
   m_Layer: 0
   m_Name: PianoKey
   m_TagString: Untagged
@@ -237,9 +238,8 @@ MonoBehaviour:
   harmonicsCount: 3
   pinchPosition: 0.15
   pinchIntensity: 2
-  lineRendererPrefab: {fileID: 0}
-  harmonicTextPrefab: {fileID: 0}
-  canvas: {fileID: 0}
+  masterVolume: 0.5
+  dampingCoefficient: 0.5
 --- !u!82 &-8445475836824129551
 AudioSource:
   m_ObjectHideFlags: 0
@@ -337,6 +337,23 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &1721870383600196116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2282470451434929224}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f7649e21d3408449596fd20e891bba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  keyPressDepth: 0.01
+  surfaceOffset: 0.001
+  constraintStrength: 15
+  releaseDistance: 0.05
+  keyCollider: {fileID: 5062840747062868562}
 --- !u!1 &6047722427726783513
 GameObject:
   m_ObjectHideFlags: 0
