@@ -7,12 +7,14 @@ public class DebugDisplay : MonoBehaviour
     private Dictionary<string, string> debugLogs = new();
     public TextMeshProUGUI display;
     public Camera camera;
+    public Transform attachTransform;
 
     private void Update()
     {
         Vector3 direction = transform.position - camera.transform.position;
-        direction.y = 0; // Keep upright
+        direction.y = 0;
         transform.rotation = Quaternion.LookRotation(direction);
+        transform.position = attachTransform.position;
     }
 
     private void OnEnable()

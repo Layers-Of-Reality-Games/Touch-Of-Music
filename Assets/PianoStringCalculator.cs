@@ -50,7 +50,7 @@ public class PianoStringCalculator
             stringCount = 3;
         }
 
-        // Calcule la longueur selon la formule: L = (1/(2*f)) * sqrt(T/μ)
+        // L = (1/(2*f)) * sqrt(T/μ)
         var length = (float) (1.0 / (2.0 * frequency) * Math.Sqrt(tension / linearDensity));
 
         return new PianoStringData(noteName, frequency, length, linearDensity, tension, stringCount);

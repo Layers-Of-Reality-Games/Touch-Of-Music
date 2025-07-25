@@ -12,10 +12,15 @@ public class BaseString : MonoBehaviour
     [Header("Pinch properties")]
     [SerializeField] private float pinchPosition = 0.15f;
     [SerializeField] private float pinchIntensity = 0.5f;
+    [SerializeField] private float minIntensity = 0.1f;
+    [SerializeField] private float maxIntensity = 1.0f;
 
     [Header("Audio Settings")]
     [SerializeField] private float masterVolume = 0.5f;
     [SerializeField] private float dampingCoefficient = 0.5f;
+
+    [Header("Visualization Settings")]
+    [SerializeField] private StringVibrationVisualizer visualizer;
 
     private AudioSource audioSource;
     private float[] harmonicsFrequencies;
@@ -25,6 +30,8 @@ public class BaseString : MonoBehaviour
     private float targetAmplitude;
     private int sampleRate;
     private float timeSincePinch;
+    private float currentPinchIntensity;
+    private bool visualizationActive = false;
 
     private const float FADE_SPEED = 50f;
 
@@ -37,6 +44,11 @@ public class BaseString : MonoBehaviour
         {
             Debug.LogError("No AudioSource component found!");
             return;
+        }
+
+        if (visualizer == null)
+        {
+            visualizer = GetComponent<StringVibrationVisualizer>();
         }
 
         sampleRate = AudioSettings.outputSampleRate;
@@ -54,6 +66,11 @@ public class BaseString : MonoBehaviour
         harmonicsPhases = new float[harmonicsCount];
 
         SetStringProperties(length, linearDensity, tension);
+
+        if (visualizer != null)
+        {
+            visualizer.Initialize();
+        }
     }
 
     private void OnAudioRead(float[] data)
@@ -90,7 +107,7 @@ public class BaseString : MonoBehaviour
                     }
                 }
 
-                sample *= masterVolume;
+                sample *= masterVolume * currentPinchIntensity;
             }
 
             data[i] = Mathf.Clamp(sample, -0.95f, 0.95f);
@@ -122,23 +139,40 @@ public class BaseString : MonoBehaviour
 
     public void Pinch()
     {
+        PinchWithIntensity(pinchIntensity);
+    }
+
+    public void PinchWithIntensity(float intensity)
+    {
         timeSincePinch = 0f;
 
-        // Calculate harmonic amplitudes based on pinch position
+        // Clamp intensity between min and max
+        currentPinchIntensity = Mathf.Clamp(intensity, minIntensity, maxIntensity);
+
+        // Calculate harmonic amplitudes based on pinch position and intensity
         for (int i = 0; i < harmonicsCount; i++)
         {
             float n = i + 1;
 
-            // Physical string pinch formula
+            // Physical string pinch formula with intensity modifier
             harmonicsAmplitudes[i] = 2f
-                                     * pinchIntensity
+                                     * currentPinchIntensity
                                      / (n * n * Mathf.PI * Mathf.PI)
                                      * Mathf.Sin(n * Mathf.PI * pinchPosition);
 
-            // Debug.Log($"Harmonic {n}: Freq={harmonicsFrequencies[i]:F2} Hz, Amp={harmonicsAmplitudes[i]:F4}");
+            // Velocity affects higher harmonics differently (harder strikes produce more high frequencies)
+            float harmonicIntensityModifier = 1f + (currentPinchIntensity - 0.5f) * 0.3f * (n / harmonicsCount);
+            harmonicsAmplitudes[i] *= harmonicIntensityModifier;
         }
 
         targetAmplitude = 1f;
+
+        // Start visualization
+        if (visualizer != null)
+        {
+            visualizer.StartVisualization(harmonicsFrequencies, harmonicsAmplitudes, length);
+            visualizationActive = true;
+        }
 
         if (!audioSource.isPlaying)
         {
@@ -149,6 +183,7 @@ public class BaseString : MonoBehaviour
     public void StopPinch()
     {
         targetAmplitude = 0f;
+        visualizer.StopVisualization();
     }
 
     private void Update()
