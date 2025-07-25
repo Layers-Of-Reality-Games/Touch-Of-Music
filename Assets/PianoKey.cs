@@ -19,6 +19,10 @@ public class PianoKey : MonoBehaviour
     [SerializeField] private float velocityScaleFactor = 1.0f;
     [SerializeField] private AnimationCurve velocityCurve = AnimationCurve.Linear(0, 0, 1, 1);
 
+    
+    [Header("PLAY")]
+    [SerializeField] private bool playplz = false;
+    
     private string noteName;
     private PianoStringData stringData;
 
@@ -69,6 +73,11 @@ public class PianoKey : MonoBehaviour
 
     private void Update()
     {
+        if (playplz)
+        {
+            PlayNote();
+
+        }
         if (isBeingPoked && pokeFollowAffordance != null)
         {
             Vector3 pokePosition = pokeFollowAffordance.pokeFollowTransform.position;

@@ -26,8 +26,8 @@ public class BaseString : MonoBehaviour
     private float[] harmonicsFrequencies;
     private float[] harmonicsAmplitudes;
     private float[] harmonicsPhases;
-    private float amplitude;
-    private float targetAmplitude;
+    //private float amplitude;
+    //private float targetAmplitude;
     private int sampleRate;
     private float timeSincePinch;
     private float currentPinchIntensity;
@@ -36,6 +36,18 @@ public class BaseString : MonoBehaviour
     private const float FADE_SPEED = 50f;
 
     public int HarmonicsCount => harmonicsCount;
+    
+    [Header("ADSR Envelope")]
+    [SerializeField] private ADSREnvelope envelope = new ADSREnvelope();
+    
+    [Header("Frequency-Dependent ADSR")]
+    [SerializeField] private AnimationCurve attackCurveByFrequency = AnimationCurve.Linear(20f, 0.05f, 4000f, 0.01f);
+    [SerializeField] private AnimationCurve decayCurveByFrequency = AnimationCurve.Linear(20f, 0.8f, 4000f, 0.2f);
+    [SerializeField] private AnimationCurve sustainCurveByFrequency = AnimationCurve.Linear(20f, 0.8f, 4000f, 0.6f);
+    [SerializeField] private AnimationCurve releaseCurveByFrequency = AnimationCurve.Linear(20f, 3.0f, 4000f, 1.0f);
+    
+    private float fundamentalFrequency;
+    private bool sustainPedal = false;
 
     private void Awake()
     {
@@ -79,11 +91,10 @@ public class BaseString : MonoBehaviour
 
         for (int i = 0; i < data.Length; i++)
         {
-            amplitude = Mathf.MoveTowards(amplitude, targetAmplitude, FADE_SPEED * deltaTime);
-
+            float envelopeAmplitude = envelope.GetAmplitude(deltaTime);
             float sample = 0f;
 
-            if (amplitude > 0.001f)
+            if (envelopeAmplitude > 0.001f)
             {
                 timeSincePinch += deltaTime;
 
@@ -95,13 +106,11 @@ public class BaseString : MonoBehaviour
                     {
                         harmonicsPhases[h] += 2f * Mathf.PI * freq * deltaTime;
 
-                        // Wrap phase to prevent numerical issues
                         while (harmonicsPhases[h] > 2f * Mathf.PI)
                             harmonicsPhases[h] -= 2f * Mathf.PI;
 
-                        // Calculate time-based damping (exponential decay)
-                        float damping = Mathf.Exp(-dampingCoefficient * (h + 1) * timeSincePinch);
-                        float currentAmplitude = harmonicsAmplitudes[h] * damping * amplitude;
+                        float harmonicDamping = CalculateHarmonicDamping(h, timeSincePinch);
+                        float currentAmplitude = harmonicsAmplitudes[h] * harmonicDamping * envelopeAmplitude;
 
                         sample += Mathf.Sin(harmonicsPhases[h]) * currentAmplitude;
                     }
@@ -113,6 +122,15 @@ public class BaseString : MonoBehaviour
             data[i] = Mathf.Clamp(sample, -0.95f, 0.95f);
         }
     }
+    
+    private float CalculateHarmonicDamping(int harmonicIndex, float time)
+    {
+        float harmonicDampingRate = dampingCoefficient * (harmonicIndex + 1) * (harmonicIndex + 1) * 0.1f;
+        
+        float frequencyDamping = Mathf.Exp(-harmonicDampingRate * time);
+        
+        return frequencyDamping;
+    }
 
     public void SetStringProperties(float stringLength, float density, float stringTension)
     {
@@ -120,16 +138,25 @@ public class BaseString : MonoBehaviour
         linearDensity = density;
         tension = stringTension;
 
-        float fundamental = (float)(0.5f / length * Math.Sqrt(tension / linearDensity));
-        Debug.Log($"Fundamental frequency: {fundamental} Hz");
+        fundamentalFrequency = (float)(0.5f / length * Math.Sqrt(tension / linearDensity));
+        Debug.Log($"Fundamental frequency: {fundamentalFrequency} Hz");
+
+        UpdateADSRForFrequency(fundamentalFrequency);
 
         for (int i = 0; i < harmonicsCount; i++)
         {
-            // Apply slight inharmonicity
-            harmonicsFrequencies[i] = fundamental * (i + 1) * (1f + 0.0001f * (i + 1) * (i + 1));
+            harmonicsFrequencies[i] = fundamentalFrequency * (i + 1) * (1f + 0.0001f * (i + 1) * (i + 1));
             harmonicsAmplitudes[i] = 0f;
             harmonicsPhases[i] = 0f;
         }
+    }
+    
+    private void UpdateADSRForFrequency(float frequency)
+    {
+        envelope.attack = attackCurveByFrequency.Evaluate(frequency);
+        envelope.decay = decayCurveByFrequency.Evaluate(frequency);
+        envelope.sustain = sustainCurveByFrequency.Evaluate(frequency);
+        envelope.release = releaseCurveByFrequency.Evaluate(frequency);
     }
 
     public void SetStringPropertiesFromData(PianoStringData data)
@@ -160,12 +187,12 @@ public class BaseString : MonoBehaviour
                                      / (n * n * Mathf.PI * Mathf.PI)
                                      * Mathf.Sin(n * Mathf.PI * pinchPosition);
 
-            // Velocity affects higher harmonics differently (harder strikes produce more high frequencies)
+            // Velocity affects higher harmonics differently
             float harmonicIntensityModifier = 1f + (currentPinchIntensity - 0.5f) * 0.3f * (n / harmonicsCount);
             harmonicsAmplitudes[i] *= harmonicIntensityModifier;
         }
 
-        targetAmplitude = 1f;
+        envelope.TriggerNote(1f);
 
         // Start visualization
         if (visualizer != null)
@@ -180,20 +207,39 @@ public class BaseString : MonoBehaviour
         }
     }
 
+
     public void StopPinch()
     {
-        targetAmplitude = 0f;
-        visualizer.StopVisualization();
+        if (!sustainPedal)
+        {
+            envelope.ReleaseNote();
+        }
     }
+    
+    public void SetSustainPedal(bool pressed)
+    {
+        sustainPedal = pressed;
+        if (!pressed && envelope.State == ADSREnvelope.EnvelopeState.Sustain)
+        {
+            envelope.ReleaseNote();
+        }
+    }
+
 
     private void Update()
     {
-        if (amplitude < 0.001f && targetAmplitude == 0f && audioSource.isPlaying)
+        if (!envelope.IsActive && audioSource.isPlaying)
         {
             audioSource.Stop();
             for (int i = 0; i < harmonicsCount; i++)
             {
                 harmonicsPhases[i] = 0f;
+            }
+            
+            if (visualizer != null && visualizationActive)
+            {
+                visualizer.StopVisualization();
+                visualizationActive = false;
             }
         }
     }
